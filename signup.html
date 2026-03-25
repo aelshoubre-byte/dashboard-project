@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up – My Refrigerator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-decorative-circle top-right"></div>
+    <div class="auth-decorative-circle bottom-left"></div>
+
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><i class="fa-solid fa-snowflake"></i></div>
+      </div>
+
+      <h1>Sign up</h1>
+      <p class="subtitle">Create a new account</p>
+
+      <form id="signupForm" novalidate>
+        <!-- First Name -->
+        <div class="form-group">
+          <label class="form-label">First name</label>
+          <input type="text" class="form-input no-icon" id="firstName" placeholder="First name" required />
+        </div>
+
+        <!-- Last Name -->
+        <div class="form-group">
+          <label class="form-label">Last name</label>
+          <input type="text" class="form-input no-icon" id="lastName" placeholder="Last name" required />
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-envelope input-icon"></i>
+            <input type="email" class="form-input" id="signupEmail" placeholder="example@gmail.com" required />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input type="password" class="form-input" id="signupPassword" placeholder="Min. 6 characters" required />
+            <button type="button" class="toggle-password" id="togglePwd">
+              <i class="fa-regular fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="form-group">
+          <label class="form-label">Confirm password</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input type="password" class="form-input" id="confirmPassword" placeholder="Repeat password" required />
+          </div>
+        </div>
+
+        <!-- Error -->
+        <p id="signupError" style="color:var(--danger);font-size:13px;text-align:center;margin-bottom:10px;display:none;"></p>
+
+        <button type="submit" class="btn btn-primary" id="signupBtn">
+          <span id="signupBtnText">Sign up</span>
+        </button>
+      </form>
+
+      <div class="auth-footer" style="margin-top:16px;">
+        Already have an account? <a href="index.html"><strong>Log in</strong></a>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+  <script>
+    if (getCurrentUser()) window.location.href = 'dashboard.html';
+
+    document.getElementById('togglePwd').addEventListener('click', function () {
+      const input = document.getElementById('signupPassword');
+      const icon = this.querySelector('i');
+      input.type = input.type === 'password' ? 'text' : 'password';
+      icon.className = input.type === 'text' ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash';
+    });
+
+    document.getElementById('signupForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const confirm = document.getElementById('confirmPassword').value;
+      const errorEl = document.getElementById('signupError');
+      const btn = document.getElementById('signupBtn');
+      const btnText = document.getElementById('signupBtnText');
+
+      errorEl.style.display = 'none';
+
+      if (!firstName || !lastName || !email || !password) {
+        errorEl.textContent = 'Please fill in all fields.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (password.length < 6) {
+        errorEl.textContent = 'Password must be at least 6 characters.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (password !== confirm) {
+        errorEl.textContent = 'Passwords do not match.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btnText.innerHTML = '<span class="loading"></span>';
+
+      const res = await apiRegister(firstName, lastName, email, password);
+      if (res.success) {
+        setToken(res.token);
+        setCurrentUser(res.user);
+        showToast('Account created successfully!', 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 1000);
+      } else {
+        errorEl.textContent = res.message || 'Registration failed.';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Create Account';
+      }
+    });
+  </script>
+</body>
+</html>

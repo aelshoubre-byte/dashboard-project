@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard – My Refrigerator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon"><i class="fa-solid fa-snowflake"></i></div>
+          <div class="sidebar-logo-text">
+            My Refrigerator
+            <span>Smart Food Tracker</span>
+          </div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item active">
+          <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a href="sensor.html" class="nav-item">
+          <i class="fa-solid fa-temperature-half"></i> Sensor
+        </a>
+        <a href="notifications.html" class="nav-item">
+          <i class="fa-regular fa-bell"></i> Notification
+        </a>
+        <a href="consumption.html" class="nav-item">
+          <i class="fa-solid fa-chart-line"></i> Consumption
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item logout" style="width:100%;background:none;border:none;cursor:pointer;" onclick="logout()">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </nav>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main -->
+    <div class="main-content">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-btn" id="menuBtn"><i class="fa-solid fa-bars"></i></button>
+          <span class="topbar-title">My Refrigerator</span>
+        </div>
+        <div class="topbar-right">
+          <button class="notif-btn" onclick="window.location.href='notifications.html'">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <div class="user-avatar" id="userAvatar" title="">A</div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+
+        <!-- Stats -->
+        <div class="stats-bar stagger" id="statsBar">
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fa-solid fa-box-open"></i></div>
+            <div class="stat-info">
+              <div class="stat-value" id="totalCount">0</div>
+              <div class="stat-label">Total Products</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="stat-info">
+              <div class="stat-value" id="expiredCount">0</div>
+              <div class="stat-label">Expired</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange"><i class="fa-regular fa-clock"></i></div>
+            <div class="stat-info">
+              <div class="stat-value" id="soonCount">0</div>
+              <div class="stat-label">Expiring Soon</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fa-solid fa-check-circle"></i></div>
+            <div class="stat-info">
+              <div class="stat-value" id="freshCount">0</div>
+              <div class="stat-label">Fresh</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories -->
+        <h2 class="section-title">Categories</h2>
+        <div class="categories-row stagger" id="categoriesRow">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Sensor Section -->
+        <h2 class="section-title">Fridge Sensor</h2>
+        <div class="sensor-section">
+          <div class="sensor-header">
+            <span style="font-weight:700;color:var(--text-secondary)">Fridge temp</span>
+            <div class="sensor-status">
+              <div class="status-dot" id="sensorDot"></div>
+              <span id="sensorStatusLabel">Sensor: <b id="sensorOnOff" style="color:var(--text-muted)">--</b></span>
+            </div>
+          </div>
+          <div class="sensor-readings">
+            <div class="sensor-reading-card">
+              <div class="reading-label">🌡️ Temperature</div>
+              <div class="reading-value" id="tempValue">--</div>
+              <div class="reading-unit">°C</div>
+              <div style="margin-top:8px;font-size:12px;font-weight:700;" id="tempStatus">--</div>
+            </div>
+            <div class="sensor-reading-card">
+              <div class="reading-label">💧 Humidity</div>
+              <div class="reading-value" id="humValue">--</div>
+              <div class="reading-unit">%</div>
+              <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">Relative Humidity</div>
+            </div>
+            <div class="sensor-reading-card">
+              <div class="reading-label">🕐 Last Update</div>
+              <div style="font-size:14px;font-weight:700;color:var(--primary-dark);margin-top:6px;" id="lastUpdate">--</div>
+              <div style="margin-top:6px;font-size:12px;color:var(--text-muted);" id="sensorMode">--</div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Product List Modal -->
+  <div class="modal-overlay" id="productModal">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-content">
+        <h2 class="sheet-title" id="modalCategoryTitle">Category</h2>
+        <div class="product-list" id="productList"></div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:8px;">
+          <span style="font-size:14px;color:var(--text-muted);font-weight:600;">Add Product</span>
+          <button class="btn-green-circle" onclick="openModal('addProductModal')">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div class="modal-overlay" id="addProductModal">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-content">
+        <h2 class="sheet-title">Add Product</h2>
+        <div class="add-product-form">
+          <div class="form-group">
+            <label class="form-label">Product Name</label>
+            <input type="text" class="form-input no-icon" id="newProductName" placeholder="Enter Product Name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantity</label>
+            <div style="display:flex;gap:10px;">
+              <input type="number" class="form-input no-icon" id="newProductQty" placeholder="Enter Quantity" min="1" style="flex:1" />
+              <select class="form-input" id="newProductUnit" style="width:110px;padding-left:12px;">
+                <option value="pcs">pcs</option>
+                <option value="kg">kg</option>
+                <option value="L">L</option>
+                <option value="cans">cans</option>
+                <option value="btl">btl</option>
+                <option value="bag">bag</option>
+                <option value="Cn">Cn</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expiration Date</label>
+            <input type="date" class="form-input no-icon" id="newProductExp" />
+          </div>
+          <button class="btn btn-success" onclick="submitAddProduct()" style="width:100%;border-radius:var(--radius-full);">
+            <i class="fa-solid fa-plus"></i> Add Product
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav (Mobile) -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-items">
+      <a href="dashboard.html" class="bottom-nav-item active">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+      </a>
+      <a href="sensor.html" class="bottom-nav-item">
+        <i class="fa-solid fa-temperature-half"></i>
+        <span>Sensor</span>
+      </a>
+      <a href="notifications.html" class="bottom-nav-item">
+        <i class="fa-regular fa-bell"></i>
+        <span>Alerts</span>
+      </a>
+      <a href="consumption.html" class="bottom-nav-item">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Stats</span>
+      </a>
+    </div>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+  <script src="sensor.js"></script>
+  <script>
+    requireAuth();
+    let activeCategory = null;
+
+    async function renderStats() {
+      const stats = await getStats();
+      const el = (id) => document.getElementById(id);
+      if (el('totalCount'))   el('totalCount').textContent   = stats.total         || 0;
+      if (el('expiredCount')) el('expiredCount').textContent = stats.expired        || 0;
+      if (el('soonCount'))    el('soonCount').textContent    = stats.expiring_soon  || 0;
+      if (el('freshCount'))   el('freshCount').textContent   = stats.fresh          || 0;
+      updateBadges();
+    }
+
+    async function renderCategories() {
+      const row      = document.getElementById('categoriesRow');
+      if (!row) return;
+      const products = await getProducts();
+      const counts   = {};
+      Object.keys(CATEGORIES).forEach(c => counts[c] = 0);
+      products.forEach(p => { if (counts[p.category] !== undefined) counts[p.category]++; });
+
+      row.innerHTML = Object.keys(CATEGORIES).map(cat => {
+        const cfg = CATEGORIES[cat];
+        return `<div class="category-card${activeCategory === cat ? ' active' : ''}" onclick="openCategory('${cat}')">
+          <div class="category-emoji">${cfg.emoji}</div>
+          <div class="category-name">${cfg.label}</div>
+          <div class="category-count">${counts[cat] || 0} items</div>
+        </div>`;
+      }).join('') + `<div class="category-card add-card" onclick="openAddProduct(null)">
+        <div class="category-emoji">+</div>
+        <div class="category-name">Add Item</div>
+        <div class="category-count">New product</div>
+      </div>`;
+    }
+
+    async function openCategory(cat) {
+      activeCategory = cat;
+      const cfg      = getCategoryConfig(cat);
+      const products = await getProducts(cat);
+      const titleEl  = document.getElementById('modalCategoryTitle');
+      if (titleEl) titleEl.textContent = cfg.label;
+
+      const list = document.getElementById('productList');
+      if (!list) return;
+
+      if (!products || products.length === 0) {
+        list.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">${cfg.emoji}</div>
+          <div class="empty-title">No products in this category</div>
+        </div>`;
+      } else {
+        list.innerHTML = products.map(p => {
+          const expDate   = p.exp_date || p.expDate;
+          const dotClass  = getExpiryDotClass(expDate);
+          const days      = getDaysUntilExpiry(expDate);
+          const daysLabel = days < 0 ? 'Expired' : days === 0 ? 'Expires today' : `Exp: ${formatExpDate(expDate)}`;
+          return `<div class="product-item" id="pi-${p.id}">
+            <div class="product-info">
+              <div class="product-name">${p.name}</div>
+              <div class="product-details">
+                <span>Qty: ${p.qty} ${p.unit}</span>
+                <span class="exp-indicator">
+                  <span class="exp-dot ${dotClass}"></span>${daysLabel}
+                </span>
+              </div>
+            </div>
+            <div class="product-actions">
+              <button class="delete-btn" onclick="removeProduct(${p.id})">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+      openModal('productModal');
+    }
+
+    async function removeProduct(id) {
+      if (!confirm('Remove this product?')) return;
+      const ok = await deleteProduct(id);
+      if (ok) {
+        await renderStats();
+        await renderCategories();
+        if (activeCategory) await openCategory(activeCategory);
+        showToast('Product removed successfully');
+      }
+    }
+
+    function openAddProduct(cat) {
+      activeCategory = cat || 'others';
+      closeModal('productModal');
+      openModal('addProductModal');
+    }
+
+    async function submitAddProduct() {
+      const name    = document.getElementById('newProductName')?.value.trim();
+      const qty     = parseFloat(document.getElementById('newProductQty')?.value);
+      const unit    = document.getElementById('newProductUnit')?.value || 'pcs';
+      const expDate = document.getElementById('newProductExp')?.value;
+
+      if (!name || !qty || !expDate) { showToast('Please fill all fields', 'error'); return; }
+
+      const product = await addProduct({ name, qty, unit, expDate, category: activeCategory || 'others' });
+      if (!product) { showToast('Failed to add product', 'error'); return; }
+
+      if (document.getElementById('newProductName')) document.getElementById('newProductName').value = '';
+      if (document.getElementById('newProductQty'))  document.getElementById('newProductQty').value  = '';
+      if (document.getElementById('newProductExp'))  document.getElementById('newProductExp').value  = '';
+
+      closeModal('addProductModal');
+      await renderStats();
+      await renderCategories();
+      showToast(name + ' added successfully!');
+      if (activeCategory) setTimeout(() => openCategory(activeCategory), 400);
+    }
+
+    function updateSensorUI(data) {
+      const el = (id) => document.getElementById(id);
+      if (el('tempValue')) el('tempValue').textContent = data.temperature !== null && data.temperature !== undefined ? data.temperature : '--';
+      if (el('humValue'))  el('humValue').textContent  = data.humidity    !== null && data.humidity    !== undefined ? data.humidity    : '--';
+
+      // Update temp status label
+      if (el('tempStatus')) {
+        const t = data.temperature;
+        if (t === null || t === undefined) { el('tempStatus').textContent = '--'; el('tempStatus').style.color = 'var(--text-muted)'; }
+        else if (t < 0)  { el('tempStatus').textContent = 'Too Cold ❄️';   el('tempStatus').style.color = '#3b82f6'; }
+        else if (t <= 4) { el('tempStatus').textContent = 'Optimal ✅';    el('tempStatus').style.color = 'var(--success)'; }
+        else if (t <= 8) { el('tempStatus').textContent = 'Acceptable ⚠️'; el('tempStatus').style.color = 'var(--warning)'; }
+        else             { el('tempStatus').textContent = 'Too Warm 🔥';   el('tempStatus').style.color = 'var(--danger)'; }
+      }
+
+      const dot   = el('sensorDot');
+      const onOff = el('sensorOnOff');
+      if (dot && onOff) {
+        if (data.connected) {
+          dot.classList.remove('offline'); onOff.textContent = 'ON';  onOff.style.color = 'var(--success)';
+        } else {
+          dot.classList.add('offline');    onOff.textContent = 'OFF'; onOff.style.color = 'var(--danger)';
+        }
+      }
+      if (el('sensorMode')) el('sensorMode').textContent = data.mode === 'mqtt' ? 'Live' : 'Offline';
+      if ((data.lastUpdate || data.updated_at) && el('lastUpdate')) {
+        const t = data.lastUpdate || data.updated_at;
+        el('lastUpdate').textContent = new Date(t).toLocaleTimeString('en', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      }
+    }
+
+    renderStats();
+    renderCategories();
+    getSensorData().then(data => updateSensorUI(data));
+
+    if (typeof sensor !== 'undefined') {
+      sensor.onData(updateSensorUI);
+      sensor.connect();
+    }
+  </script>
+</body>
+</html>

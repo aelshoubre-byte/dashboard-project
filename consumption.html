@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consumption – My Refrigerator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon"><i class="fa-solid fa-snowflake"></i></div>
+          <div class="sidebar-logo-text">
+            My Refrigerator
+            <span>Smart Food Tracker</span>
+          </div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="sensor.html" class="nav-item"><i class="fa-solid fa-temperature-half"></i> Sensor</a>
+        <a href="notifications.html" class="nav-item"><i class="fa-regular fa-bell"></i> Notification</a>
+        <a href="consumption.html" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Consumption</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item logout" style="width:100%;background:none;border:none;cursor:pointer;" onclick="logout()">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </nav>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main -->
+    <div class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-btn" id="menuBtn"><i class="fa-solid fa-bars"></i></button>
+          <span class="topbar-title">Consumption</span>
+        </div>
+        <div class="topbar-right">
+          <button class="notif-btn" onclick="window.location.href='notifications.html'">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notif-badge" id="notifBadge">0</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <!-- Tabs -->
+        <div class="consumption-tabs">
+          <button class="tab-btn active" id="tabWeekly" onclick="switchTab('weekly')">Weekly</button>
+          <button class="tab-btn" id="tabMonthly" onclick="switchTab('monthly')">Monthly</button>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-card fade-in">
+          <h2 class="section-title" id="chartTitle">Weekly Consumption</h2>
+          <div class="chart-wrapper">
+            <canvas id="consumptionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="stats-bar stagger" style="margin-bottom:24px;" id="summaryCards">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Removed Products -->
+        <div class="removed-list fade-in">
+          <h2 class="section-title">Removed Products</h2>
+          <div id="removedList"><!-- Rendered by JS --></div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-items">
+      <a href="dashboard.html" class="bottom-nav-item"><i class="fa-solid fa-house"></i><span>Home</span></a>
+      <a href="sensor.html" class="bottom-nav-item"><i class="fa-solid fa-temperature-half"></i><span>Sensor</span></a>
+      <a href="notifications.html" class="bottom-nav-item"><i class="fa-regular fa-bell"></i><span>Alerts</span></a>
+      <a href="consumption.html" class="bottom-nav-item active"><i class="fa-solid fa-chart-line"></i><span>Stats</span></a>
+    </div>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+  <script>
+    requireAuth();
+
+    let currentTab = 'weekly';
+    let chartInstance = null;
+
+    const weeklyLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const monthlyLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function buildChart(labels, data, label) {
+      const ctx = document.getElementById('consumptionChart');
+
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label,
+            data,
+            borderColor: '#2196f3',
+            backgroundColor: 'rgba(33, 150, 243, 0.08)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.45,
+            pointBackgroundColor: '#2196f3',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(26,92,56,0.9)',
+              padding: 10,
+              cornerRadius: 8,
+              titleFont: { family: 'Nunito', size: 13 },
+              bodyFont: { family: 'Nunito', size: 13 }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { family: 'Nunito', size: 12 }, color: '#7a9b82' }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(200,230,212,0.5)' },
+              ticks: { font: { family: 'Nunito', size: 12 }, color: '#7a9b82' }
+            }
+          }
+        }
+      });
+    }
+
+    function async renderSummaryCards() {
+      const removed = await getRemovedProducts();
+      const expired = removed.filter(r => r.reason === 'expired').length;
+      const consumed = removed.filter(r => r.reason === 'consumed').length;
+      const total = removed.length;
+
+      document.getElementById('summaryCards').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="stat-info">
+            <div class="stat-value">${expired}</div>
+            <div class="stat-label">Expired</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fa-solid fa-utensils"></i></div>
+          <div class="stat-info">
+            <div class="stat-value">${consumed}</div>
+            <div class="stat-label">Consumed</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fa-solid fa-list"></i></div>
+          <div class="stat-info">
+            <div class="stat-value">${total}</div>
+            <div class="stat-label">Total Removed</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function async renderRemovedList() {
+      const removed = await getRemovedProducts();
+      const list = document.getElementById('removedList');
+
+      if (removed.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <div class="empty-title">No removed products yet</div>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = removed.slice(0, 20).map(p => {
+        const cat = getCategoryConfig(p.category || 'others');
+        const isExpired = p.reason === 'expired';
+        return `
+          <div class="removed-item">
+            <div>
+              <div class="removed-name">${cat.emoji} ${p.name}</div>
+              <span class="removed-badge ${isExpired ? 'expired' : 'consumed'}">
+                <span style="width:7px;height:7px;border-radius:50%;background:${isExpired ? 'var(--danger)' : 'var(--success)'};display:inline-block;"></span>
+                ${isExpired ? 'Removed' : 'Consumed'}
+              </span>
+            </div>
+            <div class="removed-time">${timeAgo(p.removedDate)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+
+      document.getElementById('tabWeekly').classList.toggle('active', tab === 'weekly');
+      document.getElementById('tabMonthly').classList.toggle('active', tab === 'monthly');
+
+      if (tab === 'weekly') {
+        getWeeklyStats().then(res => { document.getElementById('chartTitle').textContent = 'Weekly Consumption'; buildChart(res.labels, res.values, 'Products this week'); });
+      } else {
+        getMonthlyStats().then(res => { document.getElementById('chartTitle').textContent = 'Monthly Consumption'; buildChart(res.labels, res.values, 'Products per month'); });
+      }
+    }
+
+    // ===== INIT =====
+    getWeeklyStats().then(res => buildChart(res.labels, res.values, 'Products this week'));
+    renderSummaryCards();
+    renderRemovedList();
+    updateBadges();
+  </script>
+</body>
+</html>

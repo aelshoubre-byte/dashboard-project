@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications – My Refrigerator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon"><i class="fa-solid fa-snowflake"></i></div>
+          <div class="sidebar-logo-text">
+            My Refrigerator
+            <span>Smart Food Tracker</span>
+          </div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">
+          <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a href="sensor.html" class="nav-item">
+          <i class="fa-solid fa-temperature-half"></i> Sensor
+        </a>
+        <a href="notifications.html" class="nav-item active">
+          <i class="fa-regular fa-bell"></i> Notification
+        </a>
+        <a href="consumption.html" class="nav-item">
+          <i class="fa-solid fa-chart-line"></i> Consumption
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item logout" style="width:100%;background:none;border:none;cursor:pointer;" onclick="logout()">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </nav>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main -->
+    <div class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-btn" id="menuBtn"><i class="fa-solid fa-bars"></i></button>
+          <span class="topbar-title">Notification</span>
+        </div>
+        <div class="topbar-right">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search..." id="searchInput" oninput="filterNotifications(this.value)" />
+          </div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <div id="notificationsContainer" class="fade-in">
+          <!-- Rendered by JS -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-items">
+      <a href="dashboard.html" class="bottom-nav-item">
+        <i class="fa-solid fa-house"></i><span>Home</span>
+      </a>
+      <a href="sensor.html" class="bottom-nav-item">
+        <i class="fa-solid fa-temperature-half"></i><span>Sensor</span>
+      </a>
+      <a href="notifications.html" class="bottom-nav-item active">
+        <i class="fa-regular fa-bell"></i><span>Alerts</span>
+      </a>
+      <a href="consumption.html" class="bottom-nav-item">
+        <i class="fa-solid fa-chart-line"></i><span>Stats</span>
+      </a>
+    </div>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+  <script>
+    requireAuth();
+
+    let allNotifications = [];
+
+    async function buildNotifications() {
+      const products = await getProducts();
+      const notifications = [];
+
+      products.forEach(p => {
+        const expDate = p.exp_date || p.expDate;
+        const days = getDaysUntilExpiry(expDate);
+        const status = getExpiryStatus(expDate);
+        if (status === 'expired' || status === 'soon') {
+          notifications.push({
+            ...p,
+            days,
+            status,
+            sortDate: new Date(p.expDate)
+          });
+        }
+      });
+
+      notifications.sort((a, b) => a.days - b.days);
+      return notifications;
+    }
+
+    function groupByTime(items) {
+      const today = [];
+      const yesterday = [];
+      const thisWeek = [];
+      const older = [];
+
+      items.forEach(item => {
+        const days = item.days;
+        if (days >= -1 && days <= 0) today.push(item);
+        else if (days === -1) yesterday.push(item);
+        else if (days > 0 && days <= 3) today.push(item); // expiring soon shown in today
+        else if (days > 3 && days <= 7) thisWeek.push(item);
+        else older.push(item);
+      });
+
+      return { today, yesterday, thisWeek, older };
+    }
+
+    function renderNotificationItem(p) {
+      const days = p.days;
+      const isExpired = days <= 0;
+      const dotColor = isExpired ? 'red' : 'yellow';
+      const statusText = isExpired ? 'Expired' : 'Expired soon';
+      const daysText = isExpired ? `0 days left` : `${days} days left`;
+      const timeLabel = isExpired ? 'today' : `${days} days`;
+      const cat = getCategoryConfig(p.category);
+
+      return `
+        <div class="notif-item ${isExpired ? 'expired' : 'soon'}" data-name="${p.name.toLowerCase()}">
+          <div class="notif-left">
+            <div class="notif-icon ${dotColor}">${cat.emoji}</div>
+            <div>
+              <div class="notif-name">${p.name}</div>
+              <div class="notif-status">
+                <span class="exp-dot ${isExpired ? 'expired' : 'soon'}" style="width:8px;height:8px;border-radius:50%;background:${isExpired ? 'var(--danger)' : 'var(--warning)'};display:inline-block;"></span>
+                <span style="color:${isExpired ? 'var(--danger)' : 'var(--warning)'};font-weight:700;font-size:13px;">${statusText}</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);">${daysText}</div>
+            </div>
+          </div>
+          <div class="notif-right">
+            <div class="notif-time">${timeLabel}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSection(title, items) {
+      if (items.length === 0) return '';
+      return `
+        <div class="notif-group-title">${title}</div>
+        ${items.map(renderNotificationItem).join('')}
+      `;
+    }
+
+    function renderAll(items) {
+      if (items.length === 0) {
+        return `
+          <div class="empty-state" style="margin-top:60px;">
+            <div class="empty-icon">🎉</div>
+            <div class="empty-title">All products are fresh!</div>
+            <p style="color:var(--text-muted);font-size:14px;margin-top:6px;">No expired or soon-to-expire items.</p>
+          </div>
+        `;
+      }
+      const groups = groupByTime(items);
+      return renderSection('Today', groups.today)
+           + renderSection('Yesterday', groups.yesterday)
+           + renderSection('This week', groups.thisWeek)
+           + renderSection('Older', groups.older);
+    }
+
+    function filterNotifications(query) {
+      const q = query.toLowerCase().trim();
+      const filtered = q
+        ? allNotifications.filter(n => n.name.toLowerCase().includes(q))
+        : allNotifications;
+      document.getElementById('notificationsContainer').innerHTML = renderAll(filtered);
+    }
+
+    // ===== INIT =====
+    buildNotifications().then(notifs => { allNotifications = notifs; document.getElementById('notificationsContainer').innerHTML = renderAll(allNotifications); updateBadges(); });
+    
+  </script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login – My Refrigerator</title>
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-decorative-circle top-right"></div>
+    <div class="auth-decorative-circle bottom-left"></div>
+
+    <div class="auth-card">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><i class="fa-solid fa-snowflake"></i></div>
+      </div>
+
+      <h1>Log in</h1>
+      <p class="subtitle">Welcome back! Access your smart fridge.</p>
+
+      <form id="loginForm" novalidate>
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-envelope input-icon"></i>
+            <input
+              type="email"
+              class="form-input"
+              id="loginEmail"
+              placeholder="example@gmail.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input
+              type="password"
+              class="form-input"
+              id="loginPassword"
+              placeholder="••••••••••"
+              autocomplete="current-password"
+              required
+            />
+            <button type="button" class="toggle-password" id="togglePwd">
+              <i class="fa-regular fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <p id="loginError" style="color:var(--danger);font-size:13px;text-align:center;margin-bottom:10px;display:none;"></p>
+
+        <!-- Submit -->
+        <button type="submit" class="btn btn-primary" id="loginBtn">
+          <span id="loginBtnText">Log in</span>
+        </button>
+      </form>
+
+      <a class="forgot-link" href="#" onclick="showForgot()">Forget password?</a>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="signup.html"><strong>Sign up</strong></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+  <script>
+    // If already logged in, go to dashboard
+    if (getCurrentUser()) window.location.href = 'dashboard.html';
+
+    // Toggle password visibility
+    document.getElementById('togglePwd').addEventListener('click', function () {
+      const input = document.getElementById('loginPassword');
+      const icon = this.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-regular fa-eye';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-regular fa-eye-slash';
+      }
+    });
+
+    // Handle login
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('loginBtnText');
+
+      errorEl.style.display = 'none';
+
+      if (!email || !password) {
+        errorEl.textContent = 'Please fill in all fields.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      // Show loading
+      btn.disabled = true;
+      btnText.innerHTML = '<span class="loading"></span>';
+
+      const res = await apiLogin(email, password);
+      if (res.success) {
+        setToken(res.token);
+        setCurrentUser(res.user);
+        window.location.href = 'dashboard.html';
+      } else {
+        errorEl.textContent = res.message || 'Invalid email or password.';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Log in';
+      }
+    });
+
+    function showForgot() {}
+  </script>
+
+
+
+</body>
+</html>
